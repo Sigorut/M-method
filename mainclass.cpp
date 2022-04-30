@@ -76,6 +76,7 @@ void read_matrix(QVector<QVector<fract>>& matrix)
 
 MainClass::MainClass()
 {
+    // Подключаем русский на винде.
     system("chcp 65001");
 }
 
@@ -84,11 +85,11 @@ void MainClass::init_date()
     // Считываем матрицу ограничений
     read_matrix(matrix_lim);
     // Заполняем вектор функции Z
-    z << fract(2, 1) << fract(1, 1) << fract(-1, 1) << fract(-1, 1);
+    z << fract(2, 1) << fract(-1, 1) << fract(-1, 1) << fract(-1, 1);
     // Заполняем вектор знаков данными из дано
-    sinbol << '=' << '=';
+    sinbol << '=' << '=' << '=';
     // true - max / false - min
-    m_nx = false;
+    m_nx = true;
 
     if (!m_nx) {
         for (int i = 0; i < z.size(); i++) {
@@ -236,7 +237,9 @@ void MainClass::check_origin_basis()
                 count_0++;
             }
         }
+        // Если в столбце 1 - единица и N-1 - нулей, то это базис
         if (count_0 == matrix.size() - 1 && count_1 == 1) {
+            // Записываем, что это изначальный базис и запоменаем его номер в строке
             gen_basis[row] = 1;
             gen_basis_x << 1;
             gen_basis_index[row] = i;
@@ -254,13 +257,16 @@ void MainClass::check_origin_basis()
     // Добавляем искуственные базисы
     for (int i = 0, gena = 0; i < matrix.size(); i++) {
         for (int j = 0; j < count_synt_basis; j++) {
-            if (gen_basis[i] == 1 || gen_basis[i] == -1) {
+            // Если в этой строке уже есть базис, то пишем нули, иначе создаем искуственный базис
+            if (gen_basis[i] != 0) {
                 matrix[i] << fract(0, 1);
             } else {
                 if (j == gena) {
+                    // Сохраняем J-ый индекс базиса в строке
                     gen_basis_index[i] = matrix[i].size();
                     matrix[i] << fract(1, 1);
                     gena++;
+                    // Записываем, что это искуственный базис
                     gen_basis_x << -1;
                     gen_basis[i] = -1;
                 } else {
@@ -311,6 +317,7 @@ void MainClass::cout_table(QVector<QVector<fract>> table)
         cout << endl
              << endl;
     }
+    // Если М строка существует, то выводим ее
     if (!m.isEmpty()) {
         cout << "M\t";
         for (int i = 0; i < m.size(); i++) {
@@ -324,7 +331,8 @@ void MainClass::cout_table(QVector<QVector<fract>> table)
 
 bool MainClass::check_opti(QVector<QVector<fract>> table)
 {
-    for (int i = 0; i < table[table.size() - 1].size(); i++) {
+    // Проверка оптимальности по Z
+    for (int i = 0; i < table[table.size() - 1].size() - 1; i++) {
         if (table[table.size() - 1][i].u_num < 0) {
             return false;
         }
@@ -334,8 +342,9 @@ bool MainClass::check_opti(QVector<QVector<fract>> table)
 
 bool MainClass::check_opt_m()
 {
+    // Проверка оптимальности по М
     if (m.isEmpty()) {
-        return true;
+        return false;
     }
     for (int i = 0; i < m.size() - 1; i++) {
         if (m[i].u_num < 0) {
@@ -347,6 +356,7 @@ bool MainClass::check_opt_m()
 
 bool MainClass::find_sint_basis()
 {
+    // Остались ли искуственные базисы?
     for (int i = 0; i < gen_basis_x.size(); i++) {
         if (gen_basis_x[i] < 0) {
             return true;
@@ -357,16 +367,19 @@ bool MainClass::find_sint_basis()
 
 void MainClass::calculate_m_vec(QVector<QVector<fract>> table)
 {
+    // Обнуляем М строку
     for (int i = 0; i < m.size(); i++) {
         m[i].u_num = 0;
     }
     Fraction frct;
+    // Если есть синтетические базисы, то расчитываем строку, иначе трем вектор
     if (find_sint_basis()) {
         qDebug() << gen_basis_x;
         for (int i = 0; i < table.size() - 1; i++) {
             for (int j = 0; j < table[0].size(); j++) {
                 if (gen_basis[i] == -1) {
                     if (j < table[0].size() - 1) {
+                        // Если в этом столбце нет базиса, то считаем, иначе записываем ноль
                         if (gen_basis_x[j] == 0) {
                             m[j] = frct.sum(m[j], table[i][j]);
                         } else {
@@ -378,12 +391,71 @@ void MainClass::calculate_m_vec(QVector<QVector<fract>> table)
                 }
             }
         }
+        // Домножаем все на -1
         for (int i = 0; i < m.size(); i++) {
             m[i].u_num *= -1;
         }
     } else {
         m.clear();
     }
+}
+
+void MainClass::show_answer(QVector<QVector<fract>> table){
+    cout << "Z = (";
+    bool flag = false;
+    for(int i = 0; i < table[0].size() - 1; i++){
+        for(int j = 0; j < gen_basis_index.size(); j++){
+            if(i == gen_basis_index[j]){
+                for(int g = 0; g < gen_basis_index.size(); g++){
+                    if(table[g][gen_basis_index[j]].u_num == 1){
+                        cout_fract(table[g][table[g].size() - 1]);
+                        flag = true;
+                    }
+                }
+            }
+        }
+        if(!flag) {
+            cout << 0;
+        } else {
+            flag = false;
+        }
+        if(i < table[0].size() - 2){
+            cout << ", ";
+        } else {
+            cout << ") = ";
+        }
+    }
+    if(m_nx){
+        cout_fract(table[table.size() - 1][table[0].size() - 1]);
+        cout << endl;
+    } else {
+        cout_fract(fract(table[table.size() - 1][table[0].size() - 1].u_num * -1, table[table.size() - 1][table[0].size() - 1].d_num));
+        cout << endl;
+    }
+
+}
+
+bool MainClass::check_solution(QVector<QVector<fract>> table){
+    if(check_opt_m()){
+        // Остались ли искуственные базисы
+        if (find_sint_basis()) {
+            qDebug("Искуственный базис остался, значит функция не имеет решений.");
+        } else{
+            show_answer(table);
+        }
+        return false;
+    } else {
+        if(m.isEmpty() && check_opti(table)){
+            // Остались ли искуственные базисы
+            if (find_sint_basis()) {
+                qDebug("Искуственный базис остался, значит функция не имеет решений.");
+            } else {
+                show_answer(table);
+            }
+            return false;
+        }
+    }
+    return true;
 }
 
 void MainClass::simplex_method()
@@ -408,16 +480,15 @@ void MainClass::simplex_method()
     }
     table << dima;
     dima.clear();
+    // Считаем М строку
     calculate_m_vec(table);
     cout << "Симплекс таблица №" << table_num << ":" << endl;
     table_num++;
     cout_table(table);
     fract tim, cur_tim, cur_mult_tim;
-
-    while (!check_opti(table) || !check_opt_m()) {
+    while (check_solution(table)) {
         master_col = master_row = 0;
         // true - max / false - min
-
         if (!m.isEmpty()) {
             for (int i = 1; i < m.size() - 1; i++) {
                 if (m[i].u_num < 0) {
@@ -440,7 +511,6 @@ void MainClass::simplex_method()
             // Иначе выбираем наибольший положительный элемент в Z
             // и определяем ведущий столбец
         } else {
-
             for (int i = 1; i < table[table.size() - 1].size() - 1; i++) {
                 if (table[table.size() - 1][i].u_num > 0) {
                     if (table[table.size() - 1][master_col] < table[table.size() - 1][i]) {
@@ -453,6 +523,8 @@ void MainClass::simplex_method()
         tim = cur_tim = fract(0, 1);
         for (int i = 0; i < table.size() - 1; i++) {
             if (table[i][master_col].u_num != 0) {
+                // Если это первый проверяемый элемент или предыдущий элемент не подходит,
+                // то записываем первый тим, иначе записывем второй тим.
                 if (i == 0 || tim.u_num <= 0) {
                     tim = frct.mult(table[i][table[i].size() - 1], table[i][master_col], 1);
                 } else {
@@ -468,6 +540,9 @@ void MainClass::simplex_method()
                 }
             }
         }
+//        if(!check_solution(table)){
+//            break;
+//        }
         // Делим строку на ведущий элемент table[master_row][master_col]
         cur_mult_tim = table[master_row][master_col];
         for (int i = 0; i < table[0].size(); i++) {
@@ -482,15 +557,15 @@ void MainClass::simplex_method()
                 }
             }
         }
-        cout << "MASTER_row = " << master_row << " MASTER_col = " << master_col << endl;
+//        cout << "MASTER_row = " << master_row << " MASTER_col = " << master_col << endl;
 
         if (!m.isEmpty()) {
             cur_mult_tim = m[master_col];
             for (int j = 0; j < m.size(); j++) {
-                cout_fract(m[j]);
-                cout << " - ";
-                cout_fract(frct.mult(table[master_row][j], cur_mult_tim));
-                cout << endl;
+//                cout_fract(m[j]);
+//                cout << " - ";
+//                cout_fract(frct.mult(table[master_row][j], cur_mult_tim));
+//                cout << endl;
                 m[j] = frct.sum(m[j], frct.mult(table[master_row][j], cur_mult_tim), 1);
             }
         }
@@ -507,14 +582,11 @@ void MainClass::simplex_method()
         gen_basis_index[master_row] = master_col;
         gen_basis_x[master_col] = 1;
         gen_basis[master_row] = 1;
-
         calculate_m_vec(table);
+
         cout << "Симплекс таблица №" << table_num << ":" << endl;
         table_num++;
         cout_table(table);
     }
-    // Остались ли искуственные базисы
-    if (find_sint_basis()) {
-        qDebug("Искуственный базис остался, значит функция не имеет решений.");
-    }
+
 }

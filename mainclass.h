@@ -15,10 +15,12 @@ public:
     void back_horny(QVector<QVector<fract>> matrix_no_horny, QVector<QVector<fract>>& matrix_horny);
     void simplex_method();
     void cout_table(QVector<QVector<fract>> table);
+    void show_answer(QVector<QVector<fract>> table);
     bool check_opti(QVector<QVector<fract>> table);
     bool find_sint_basis();
     void calculate_m_vec(QVector<QVector<fract>> table);
     bool check_opt_m();
+    bool check_solution(QVector<QVector<fract>> table);
 
 private:
     bool m_nx;
