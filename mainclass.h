@@ -27,6 +27,7 @@ private:
     QVector<fract> z;
     QVector<fract> m;
     QVector<QChar> sinbol;
+    int count_synt_basis;
     QVector<QVector<fract>> matrix_lim;
     QVector<QVector<fract>> matrix_can;
     QVector<qint16> gen_basis;
