@@ -85,17 +85,17 @@ void MainClass::init_date()
     // Считываем матрицу ограничений
     read_matrix(matrix_lim);
     // Заполняем вектор функции Z
-    z << fract(2, 1) << fract(-1, 1) << fract(-1, 1) << fract(-1, 1);
+    z << fract(2, 1) << fract(11, 1);
     // Заполняем вектор знаков данными из дано
-    sinbol << '=' << '=' << '=';
+    sinbol << '>' << '>' << '>';
     // true - max / false - min
-    m_nx = true;
+    m_nx = false;
 
-    if (!m_nx) {
-        for (int i = 0; i < z.size(); i++) {
-            z[i].u_num *= -1;
-        }
-    }
+    //    if (!m_nx) {
+    //        for (int i = 0; i < z.size(); i++) {
+    //            z[i].u_num *= -1;
+    //        }
+    //    }
     cout << endl;
     // Выводим дано
     cout << "Z = ";
@@ -308,11 +308,6 @@ void MainClass::cout_table(QVector<QVector<fract>> table)
             // Вывод значений матрицы
             cout_fract(table[i][j]);
             cout << "\t";
-            //            if(table[i][j].d_num == 1){
-            //                cout<<table[i][j].u_num<<"\t";
-            //            }else {
-            //                cout<<table[i][j].u_num<<"/"<<table[i][j].d_num<<"\t";
-            //            }
         }
         cout << endl
              << endl;
@@ -332,9 +327,16 @@ void MainClass::cout_table(QVector<QVector<fract>> table)
 bool MainClass::check_opti(QVector<QVector<fract>> table)
 {
     // Проверка оптимальности по Z
+
     for (int i = 0; i < table[table.size() - 1].size() - 1; i++) {
-        if (table[table.size() - 1][i].u_num < 0) {
-            return false;
+        if (m_nx) {
+            if (table[table.size() - 1][i].u_num < 0) {
+                return false;
+            }
+        } else {
+            if (table[table.size() - 1][i].u_num > 0) {
+                return false;
+            }
         }
     }
     return true;
@@ -425,13 +427,8 @@ void MainClass::show_answer(QVector<QVector<fract>> table)
             cout << ") = ";
         }
     }
-    if (m_nx) {
-        cout_fract(table[table.size() - 1][table[0].size() - 1]);
-        cout << endl;
-    } else {
-        cout_fract(fract(table[table.size() - 1][table[0].size() - 1].u_num * -1, table[table.size() - 1][table[0].size() - 1].d_num));
-        cout << endl;
-    }
+    cout_fract(table[table.size() - 1][table[0].size() - 1]);
+    cout << endl;
 }
 
 bool MainClass::check_solution(QVector<QVector<fract>> table)
@@ -518,24 +515,26 @@ void MainClass::simplex_method()
                 }
             }
         }
-        // Оперделяем ведущую строку
+        // Опрtделяем ведущую строку
         tim = cur_tim = fract(0, 1);
+        //Находим первое неотрицательное отношение B и ведущего столбца
         for (int i = 0; i < table.size() - 1; i++) {
-            if (table[i][master_col].u_num != 0) {
-                // Если это первый проверяемый элемент или предыдущий элемент не подходит,
-                // то записываем первый тим, иначе записывем второй тим.
-                if (i == 0 || tim.u_num <= 0) {
-                    tim = table[i][table[i].size() - 1] / table[i][master_col];
-                } else {
-                    cur_tim = table[i][table[i].size() - 1] / table[i][master_col];
-                }
+            if (table[i][master_col].u_num != 0 && (table[i][table[i].size() - 1].u_num * table[i][master_col].u_num) > 0) {
+                tim = table[i][table[i].size() - 1] / table[i][master_col];
+                master_row = i;
+                cout << "MASTER_ROW = " << master_row << endl;
+                break;
+            }
+        }
+        cout_fract(tim);
+        //Проходим по всем оставшимся строкам, выбирая наименьшее положительное отношение B и ведущего столбца
+        for (int i = master_row; i < table.size() - 1; i++) {
 
-                if (tim > cur_tim && cur_tim.u_num > 0) {
+            if (table[i][table[i].size() - 1].u_num * table[i][master_col].u_num > 0) {
+                cur_tim = table[i][table[i].size() - 1] / table[i][master_col];
+                if (cur_tim < tim) {
                     master_row = i;
                     tim = cur_tim;
-                }
-                if (tim.u_num > 0 && cur_tim.u_num <= 0) {
-                    master_row = i;
                 }
             }
         }
